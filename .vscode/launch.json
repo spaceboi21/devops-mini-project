@@ -1,0 +1,58 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "pwa-node",
+      "request": "launch",
+      "name": "Debug Node",
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
+      "program": "${workspaceFolder}/index.js"
+    },
+    {
+      "name": "Debug Jest React App Tests",
+      "type": "node",
+      "request": "launch",
+      "env": {
+        "CI": "true"
+      },
+      "runtimeExecutable": "${workspaceRoot}/node_modules/.bin/react-scripts",
+      "args": [
+        "test",
+        "--runInBand",
+        "--no-cache",
+        "--testTimeout",
+        "999999"
+      ],
+      "cwd": "${workspaceRoot}",
+      "protocol": "inspector",
+      "outputCapture": "std",
+      "internalConsoleOptions": "openOnSessionStart",
+      "disableOptimisticBPs": true
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Jest api_endpoint Tests",
+      "program": "${workspaceRoot}/node_modules/jest/bin/jest.js",
+      "args": [
+        "--verbose",
+        "--runInBand",
+        "--no-cache",
+        "--testTimeout",
+        "999999",
+        "${workspaceFolder}/api_endpoint.test.js"
+      ],
+      "runtimeArgs": [
+        "--nolazy"
+      ],
+      "outputCapture": "std",
+      "internalConsoleOptions": "openOnSessionStart",
+      "disableOptimisticBPs": true
+    }
+  ]
+}
