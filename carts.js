@@ -6,16 +6,16 @@ let activeCarts = [
     cartID: "777",
     cartItems: [
       {
-        title: "Fresh Strawberries",
-        description: "Assorted sizes, 2 cartons",
+        title: "Abdul Wahab Paracha",
+        description: "Assorted sizes, 5'6",
         cost: 200,
-        imageUrl: "stawberries.jpg"
+        imageUrl: "paracha.jpg"
       },
       {
-        title: "Fresh Blackberries",
-        description: "Assorted sizes, 2 cartons",
+        title: "StinkyFly",
+        description: "Assorted sizes, 2'2",
         cost: 295,
-        imageUrl: "blackberries.jpg"
+        imageUrl: "romi.jpg"
       }
     ]
   },
