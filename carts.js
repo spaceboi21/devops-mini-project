@@ -6,8 +6,8 @@ let activeCarts = [
     cartID: "777",
     cartItems: [
       {
-        title: "Abdul Wahab Paracha",
-        description: "Assorted sizes, 5'6",
+        title: "Abdul wahab Paracha",
+        description: "Assorted sizes, 5'5",
         cost: 200,
         imageUrl: "paracha.jpg"
       },
