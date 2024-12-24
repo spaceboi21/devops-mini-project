@@ -109,16 +109,16 @@ pipeline {
                     echo "All tests passed. Merging from testing to main..."
                     
                     Optional: Automatically merge testing to main (requires Git credentials)
-                    Uncomment and configure if desired
-                    sshagent (credentials: ['GIT_CREDENTIALS']) {
-                        sh """
-                          git config user.name 'spaceboi21'
-                          git config user.email 'ma_abbas2001@hotmail.com'
-                          git checkout main
-                          git merge origin/testing
-                          git push origin main
-                        """
-                    }
+                    // Uncomment and configure if desired
+                    // sshagent (credentials: ['GIT_CREDENTIALS']) {
+                    //     sh """
+                    //       git config user.name 'spaceboi21'
+                    //       git config user.email 'ma_abbas2001@hotmail.com'
+                    //       git checkout main
+                    //       git merge origin/testing
+                    //       git push origin main
+                    //     """
+                    // }
                 }
             }
         }
