@@ -10,11 +10,16 @@ COPY package*.json ./
 # Install dependencies
 RUN npm install
 
-# Copy all the project files to the container
+# Copy all files
 COPY . .
 
-# Expose the port your app runs on (e.g., 3000)
+# *** Build the React app ***
+RUN npm run build
+
+# The final build files are now in /app/build
+
+# Expose the port your app runs on
 EXPOSE 3000
 
-# Command to start the app
+# Start your Node/Express server
 CMD ["npm", "start"]
