@@ -5,8 +5,14 @@ pipeline {
         stage('Checkout') {
             steps {
                 script {
-                    // Pulls from the current branch (dev, testing, main)
-                    checkout scm
+                    // Use SSH to pull from your GitHub repository
+                    checkout([$class: 'GitSCM', 
+                        branches: [[name: "*/${env.BRANCH_NAME}"]],
+                        userRemoteConfigs: [[
+                            url: 'git@github.com:spaceboi21/devops-mini-project.git',
+                            credentialsId: 'GITHUB_SSH_KEY' // Replace with the ID of your Jenkins SSH credentials
+                        ]]
+                    ])
                 }
             }
         }
@@ -22,14 +28,13 @@ pipeline {
             steps {
                 script {
                     echo "Building Docker image for branch: ${env.BRANCH_NAME}"
-                    
-                    // Build locally on Jenkins host or Dev instance
+
+                    // Build the Docker image locally (on your Jenkins host or dev server)
                     sh """
                       docker build -t my-node-app:${env.BRANCH_NAME} .
                     """
-                    
-                    // Optional: Push to a Docker registry
-                    // Uncomment below if you have a Docker registry (e.g., Docker Hub)
+
+                    // (Optional) Uncomment if pushing to a Docker registry:
                     // sh """
                     //   docker tag my-node-app:${env.BRANCH_NAME} your-dockerhub-user/my-node-app:${env.BRANCH_NAME}
                     //   docker push your-dockerhub-user/my-node-app:${env.BRANCH_NAME}
@@ -45,7 +50,7 @@ pipeline {
             steps {
                 script {
                     echo "Deploying to Dev environment..."
-                    
+
                     // SSH into Dev instance and deploy
                     sshagent (credentials: ['DEV_SSH_KEY']) {
                         sh """
@@ -65,7 +70,7 @@ pipeline {
             steps {
                 script {
                     echo "Deploying to Testing environment..."
-                    
+
                     // SSH into Testing instance and deploy
                     sshagent (credentials: ['DEV_SSH_KEY']) {
                         sh """
@@ -85,7 +90,7 @@ pipeline {
             steps {
                 script {
                     echo "Running automated tests on the Testing environment..."
-                    
+
                     // Run tests inside the Testing container
                     sshagent (credentials: ['DEV_SSH_KEY']) {
                         sh """
@@ -107,9 +112,9 @@ pipeline {
             steps {
                 script {
                     echo "All tests passed. Merging from testing to main..."
-                    
-                    Optional: Automatically merge testing to main (requires Git credentials)
-                    // Uncomment and configure if desired
+
+                    // (Optional) Uncomment to automatically merge 'testing' into 'main'
+                    // This requires separate Git credentials with commit/push permissions
                     // sshagent (credentials: ['GIT_CREDENTIALS']) {
                     //     sh """
                     //       git config user.name 'spaceboi21'
@@ -133,7 +138,7 @@ pipeline {
             steps {
                 script {
                     echo "Deploying to Staging environment..."
-                    
+
                     // SSH into Staging instance and deploy
                     sshagent (credentials: ['DEV_SSH_KEY']) {
                         sh """
