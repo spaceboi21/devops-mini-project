@@ -1,16 +1,23 @@
 pipeline {
     agent any
 
+    environment {
+        // Default branch if BRANCH_NAME is not set
+        BRANCH_NAME = "${env.BRANCH_NAME ?: 'main'}"
+    }
+
     stages {
         stage('Checkout') {
             steps {
                 script {
-                    // Use SSH to pull from your GitHub repository
+                    echo "Checking out branch: ${BRANCH_NAME}"
+
+                    // Checkout the branch with fallback to main
                     checkout([$class: 'GitSCM', 
-                        branches: [[name: "*/${env.BRANCH_NAME}"]],
+                        branches: [[name: "*/${BRANCH_NAME}"]],
                         userRemoteConfigs: [[
                             url: 'git@github.com:spaceboi21/devops-mini-project.git',
-                            credentialsId: 'GITHUB_SSH_KEY' // Replace with the ID of your Jenkins SSH credentials
+                            credentialsId: 'GITHUB_SSH_KEY' // Ensure this credential exists in Jenkins
                         ]]
                     ])
                 }
@@ -27,17 +34,17 @@ pipeline {
             }
             steps {
                 script {
-                    echo "Building Docker image for branch: ${env.BRANCH_NAME}"
+                    echo "Building Docker image for branch: ${BRANCH_NAME}"
 
-                    // Build the Docker image locally (on your Jenkins host or dev server)
+                    // Build Docker image locally
                     sh """
-                      docker build -t my-node-app:${env.BRANCH_NAME} .
+                      docker build -t my-node-app:${BRANCH_NAME} .
                     """
 
-                    // (Optional) Uncomment if pushing to a Docker registry:
+                    // Uncomment the lines below to push to Docker Hub
                     // sh """
-                    //   docker tag my-node-app:${env.BRANCH_NAME} your-dockerhub-user/my-node-app:${env.BRANCH_NAME}
-                    //   docker push your-dockerhub-user/my-node-app:${env.BRANCH_NAME}
+                    //   docker tag my-node-app:${BRANCH_NAME} your-dockerhub-user/my-node-app:${BRANCH_NAME}
+                    //   docker push your-dockerhub-user/my-node-app:${BRANCH_NAME}
                     // """
                 }
             }
@@ -51,7 +58,7 @@ pipeline {
                 script {
                     echo "Deploying to Dev environment..."
 
-                    // SSH into Dev instance and deploy
+                    // Deploy to Dev instance via SSH
                     sshagent (credentials: ['DEV_SSH_KEY']) {
                         sh """
                           ssh -o StrictHostKeyChecking=no ubuntu@ec2-16-170-223-61.eu-north-1.compute.amazonaws.com \\
@@ -71,7 +78,7 @@ pipeline {
                 script {
                     echo "Deploying to Testing environment..."
 
-                    // SSH into Testing instance and deploy
+                    // Deploy to Testing instance via SSH
                     sshagent (credentials: ['DEV_SSH_KEY']) {
                         sh """
                           ssh -o StrictHostKeyChecking=no ubuntu@ec2-51-20-109-124.eu-north-1.compute.amazonaws.com \\
@@ -91,7 +98,7 @@ pipeline {
                 script {
                     echo "Running automated tests on the Testing environment..."
 
-                    // Run tests inside the Testing container
+                    // Run tests inside Testing container
                     sshagent (credentials: ['DEV_SSH_KEY']) {
                         sh """
                           ssh -o StrictHostKeyChecking=no ubuntu@ec2-51-20-109-124.eu-north-1.compute.amazonaws.com \\
@@ -113,8 +120,7 @@ pipeline {
                 script {
                     echo "All tests passed. Merging from testing to main..."
 
-                    // (Optional) Uncomment to automatically merge 'testing' into 'main'
-                    // This requires separate Git credentials with commit/push permissions
+                    // Uncomment to enable automatic merging
                     // sshagent (credentials: ['GIT_CREDENTIALS']) {
                     //     sh """
                     //       git config user.name 'spaceboi21'
@@ -139,7 +145,7 @@ pipeline {
                 script {
                     echo "Deploying to Staging environment..."
 
-                    // SSH into Staging instance and deploy
+                    // Deploy to Staging instance via SSH
                     sshagent (credentials: ['DEV_SSH_KEY']) {
                         sh """
                           ssh -o StrictHostKeyChecking=no ubuntu@ec2-51-20-137-150.eu-north-1.compute.amazonaws.com \\
