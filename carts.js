@@ -9,13 +9,13 @@ let activeCarts = [
         title: "Abdul wahab Paracha",
         description: "Assorted sizes, 5'5",
         cost: 200,
-        imageUrl: "paracha.jpg"
+        imageUrl: "blackberries.jpg"
       },
       {
         title: "StinkyFly",
         description: "Assorted sizes, 2'2",
         cost: 295,
-        imageUrl: "romi.jpg"
+        imageUrl: "strawberries.jpg"
       }
     ]
   },
