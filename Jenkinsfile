@@ -11,7 +11,7 @@ pipeline {
             }
         }
 
-        stage('Build Image on Dev (or Jenkins)') {
+        stage('Build Docker Image') {
             when {
                 anyOf {
                     branch 'dev'
@@ -23,17 +23,17 @@ pipeline {
                 script {
                     echo "Building Docker image for branch: ${env.BRANCH_NAME}"
                     
-                    // Option A: Build locally on Jenkins host (which is presumably the Dev instance).
-                    // If Jenkins has Docker installed + /var/run/docker.sock:
+                    // Build locally on Jenkins host or Dev instance
                     sh """
                       docker build -t my-node-app:${env.BRANCH_NAME} .
                     """
                     
-                    // Option B (preferred best practice):
-                    //   Build the image, then push to Docker Hub/ECR with a tag.
-                    //   e.g.:
-                    //   docker build -t <your-dockerhub-user>/my-node-app:${env.BRANCH_NAME} .
-                    //   docker push <your-dockerhub-user>/my-node-app:${env.BRANCH_NAME}
+                    // Optional: Push to a Docker registry
+                    // Uncomment below if you have a Docker registry (e.g., Docker Hub)
+                    // sh """
+                    //   docker tag my-node-app:${env.BRANCH_NAME} your-dockerhub-user/my-node-app:${env.BRANCH_NAME}
+                    //   docker push your-dockerhub-user/my-node-app:${env.BRANCH_NAME}
+                    // """
                 }
             }
         }
@@ -45,11 +45,8 @@ pipeline {
             steps {
                 script {
                     echo "Deploying to Dev environment..."
-                    // SSH into dev instance (if Jenkins is on a separate host) or run local if Jenkins is the same dev server
-                    // We'll assume we DO SSH, to keep it consistent with test/stage steps.
                     
-                    // Use Jenkins credentials for SSH
-                    // 'sshagent' approach:
+                    // SSH into Dev instance and deploy
                     sshagent (credentials: ['DEV_SSH_KEY']) {
                         sh """
                           ssh -o StrictHostKeyChecking=no ubuntu@ec2-16-170-223-61.eu-north-1.compute.amazonaws.com \\
@@ -61,14 +58,15 @@ pipeline {
             }
         }
 
-        stage('Deploy to Test') {
+        stage('Deploy to Testing') {
             when {
                 branch 'testing'
             }
             steps {
                 script {
-                    echo "Deploying to Test environment..."
-                    // If you built and pushed the image to a registry, you'd do "docker pull" on the test server
+                    echo "Deploying to Testing environment..."
+                    
+                    // SSH into Testing instance and deploy
                     sshagent (credentials: ['DEV_SSH_KEY']) {
                         sh """
                           ssh -o StrictHostKeyChecking=no ubuntu@ec2-51-20-109-124.eu-north-1.compute.amazonaws.com \\
@@ -80,15 +78,15 @@ pipeline {
             }
         }
 
-        stage('Run Tests in Test environment') {
+        stage('Run Tests in Testing Environment') {
             when {
                 branch 'testing'
             }
             steps {
                 script {
-                    echo "Running automated tests on the Test environment..."
-                    // Example: 'docker exec' to run tests, or a separate command
-                    // ssh - to run "docker exec app_testing npm test" 
+                    echo "Running automated tests on the Testing environment..."
+                    
+                    // Run tests inside the Testing container
                     sshagent (credentials: ['DEV_SSH_KEY']) {
                         sh """
                           ssh -o StrictHostKeyChecking=no ubuntu@ec2-51-20-109-124.eu-north-1.compute.amazonaws.com \\
@@ -99,7 +97,7 @@ pipeline {
             }
         }
 
-        stage('Merge testing -> main') {
+        stage('Merge Testing to Main') {
             when {
                 allOf {
                     branch 'testing'
@@ -109,14 +107,18 @@ pipeline {
             steps {
                 script {
                     echo "All tests passed. Merging from testing to main..."
-                    // Automatic merge or manual. Example of auto merge (needs git push perms):
-                    // sh """
-                    //   git config user.name 'Jenkins'
-                    //   git config user.email 'jenkins@example.com'
-                    //   git checkout main
-                    //   git merge origin/testing
-                    //   git push origin main
-                    // """
+                    
+                    Optional: Automatically merge testing to main (requires Git credentials)
+                    Uncomment and configure if desired
+                    sshagent (credentials: ['GIT_CREDENTIALS']) {
+                        sh """
+                          git config user.name 'spaceboi21'
+                          git config user.email 'ma_abbas2001@hotmail.com'
+                          git checkout main
+                          git merge origin/testing
+                          git push origin main
+                        """
+                    }
                 }
             }
         }
@@ -131,7 +133,8 @@ pipeline {
             steps {
                 script {
                     echo "Deploying to Staging environment..."
-                    // SSH into staging server
+                    
+                    // SSH into Staging instance and deploy
                     sshagent (credentials: ['DEV_SSH_KEY']) {
                         sh """
                           ssh -o StrictHostKeyChecking=no ubuntu@ec2-51-20-137-150.eu-north-1.compute.amazonaws.com \\
