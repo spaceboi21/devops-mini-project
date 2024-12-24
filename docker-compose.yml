@@ -19,19 +19,19 @@ services:
       - mongo-data:/data/db
     restart: always
 
-  jenkins:
-    image: jenkins/jenkins:lts-jdk11
-    # or you can try "jenkins/jenkins:lts" if you want the latest LTS with Java 11
-    user: root
-    ports:
-      - "8080:8080"       # Jenkins UI
-      - "50000:50000"     # For Jenkins agents, if you use distributed builds
-    volumes:
-      - jenkins_home:/var/jenkins_home
-      # (Optional) Mount Docker socket if Jenkins needs to build Docker images
-      - /var/run/docker.sock:/var/run/docker.sock
-    restart: always
+  # jenkins:
+  #   image: jenkins/jenkins:lts-jdk11
+  #   # or you can try "jenkins/jenkins:lts" if you want the latest LTS with Java 11
+  #   user: root
+  #   ports:
+  #     - "8080:8080"       # Jenkins UI
+  #     - "50000:50000"     # For Jenkins agents, if you use distributed builds
+  #   volumes:
+  #     - jenkins_home:/var/jenkins_home
+  #     # (Optional) Mount Docker socket if Jenkins needs to build Docker images
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #   restart: always
 
 volumes:
   mongo-data:
-  jenkins_home:
+  # jenkins_home:
