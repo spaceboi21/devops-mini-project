@@ -2,8 +2,9 @@ pipeline {
     agent any
 
     environment {
-        // Default branch if BRANCH_NAME is not set
         BRANCH_NAME = "${env.BRANCH_NAME ?: 'main'}"
+        // Add npm config to address potential permission issues
+        NPM_CONFIG_CACHE = "${WORKSPACE}/.npm"
     }
 
     stages {
@@ -11,13 +12,11 @@ pipeline {
             steps {
                 script {
                     echo "Checking out branch: ${BRANCH_NAME}"
-
-                    // Checkout the branch with fallback to main
                     checkout([$class: 'GitSCM', 
                         branches: [[name: "*/${BRANCH_NAME}"]],
                         userRemoteConfigs: [[
                             url: 'git@github.com:spaceboi21/devops-mini-project.git',
-                            credentialsId: 'GITHUB_SSH_KEY' // Ensure this credential exists in Jenkins
+                            credentialsId: 'GITHUB_SSH_KEY'
                         ]]
                     ])
                 }
@@ -35,29 +34,58 @@ pipeline {
             steps {
                 script {
                     echo "Building Docker image for branch: ${BRANCH_NAME}"
-
-                    // Build Docker image locally with caching
+                    
+                    // Create a .dockerignore if it doesn't exist
+                    sh '''
+                        echo "node_modules" > .dockerignore
+                        echo ".git" >> .dockerignore
+                        echo "npm-debug.log" >> .dockerignore
+                    '''
+                    
+                    // Build Docker image with proper error handling
                     sh """
-                      docker build --no-cache -t my-node-app:${BRANCH_NAME} .
+                        # Ensure Docker daemon is running and we have proper permissions
+                        docker info
+                        
+                        # Clean up any old images to free space
+                        docker image prune -f
+                        
+                        # Build the image
+                        docker build \
+                            --progress=plain \
+                            --no-cache \
+                            --build-arg NODE_ENV=production \
+                            -t my-node-app:${BRANCH_NAME} .
                     """
                 }
             }
         }
 
         stage('Deploy to Dev') {
-            when {
-                branch 'dev'
-            }
+            when { branch 'dev' }
             steps {
                 script {
                     echo "Deploying to Dev environment..."
-
-                    // Deploy to Dev instance via SSH
                     sshagent (credentials: ['DEV_SSH_KEY']) {
                         sh """
-                          ssh -o StrictHostKeyChecking=no ubuntu@ec2-16-170-223-61.eu-north-1.compute.amazonaws.com \\
-                          'docker stop app_dev || true && docker rm app_dev || true && \\
-                           docker run -d --name app_dev -p 3000:3000 my-node-app:dev'
+                            ssh -o StrictHostKeyChecking=no ubuntu@ec2-16-170-223-61.eu-north-1.compute.amazonaws.com '
+                                # Pull the image if it exists on the remote
+                                docker pull my-node-app:dev || true
+                                
+                                # Stop and remove existing container
+                                docker stop app_dev || true
+                                docker rm app_dev || true
+                                
+                                # Run new container
+                                docker run -d \
+                                    --name app_dev \
+                                    -p 3000:3000 \
+                                    --restart unless-stopped \
+                                    my-node-app:dev
+                                
+                                # Clean up old images
+                                docker image prune -f
+                            '
                         """
                     }
                 }
@@ -65,19 +93,30 @@ pipeline {
         }
 
         stage('Deploy to Testing') {
-            when {
-                branch 'testing'
-            }
+            when { branch 'testing' }
             steps {
                 script {
                     echo "Deploying to Testing environment..."
-
-                    // Deploy to Testing instance via SSH
                     sshagent (credentials: ['DEV_SSH_KEY']) {
                         sh """
-                          ssh -o StrictHostKeyChecking=no ubuntu@ec2-51-20-109-124.eu-north-1.compute.amazonaws.com \\
-                          'docker stop app_testing || true && docker rm app_testing || true && \\
-                           docker run -d --name app_testing -p 3000:3000 my-node-app:testing'
+                            ssh -o StrictHostKeyChecking=no ubuntu@ec2-51-20-109-124.eu-north-1.compute.amazonaws.com '
+                                # Pull the image if it exists on the remote
+                                docker pull my-node-app:testing || true
+                                
+                                # Stop and remove existing container
+                                docker stop app_testing || true
+                                docker rm app_testing || true
+                                
+                                # Run new container
+                                docker run -d \
+                                    --name app_testing \
+                                    -p 3000:3000 \
+                                    --restart unless-stopped \
+                                    my-node-app:testing
+                                
+                                # Clean up old images
+                                docker image prune -f
+                            '
                         """
                     }
                 }
@@ -85,45 +124,20 @@ pipeline {
         }
 
         stage('Run Tests in Testing Environment') {
-            when {
-                branch 'testing'
-            }
+            when { branch 'testing' }
             steps {
                 script {
                     echo "Running automated tests on the Testing environment..."
-
-                    // Run tests inside Testing container
                     sshagent (credentials: ['DEV_SSH_KEY']) {
                         sh """
-                          ssh -o StrictHostKeyChecking=no ubuntu@ec2-51-20-109-124.eu-north-1.compute.amazonaws.com \\
-                          'docker exec app_testing npm test'
+                            ssh -o StrictHostKeyChecking=no ubuntu@ec2-51-20-109-124.eu-north-1.compute.amazonaws.com '
+                                docker exec app_testing npm test || {
+                                    echo "Tests failed!"
+                                    exit 1
+                                }
+                            '
                         """
                     }
-                }
-            }
-        }
-
-        stage('Merge Testing to Main') {
-            when {
-                allOf {
-                    branch 'testing'
-                    expression { currentBuild.currentResult == "SUCCESS" }
-                }
-            }
-            steps {
-                script {
-                    echo "All tests passed. Merging from testing to main..."
-
-                    // Uncomment to enable automatic merging
-                    // sshagent (credentials: ['GIT_CREDENTIALS']) {
-                    //     sh """
-                    //       git config user.name 'spaceboi21'
-                    //       git config user.email 'ma_abbas2001@hotmail.com'
-                    //       git checkout main
-                    //       git merge origin/testing
-                    //       git push origin main
-                    //     """
-                    // }
                 }
             }
         }
@@ -138,17 +152,43 @@ pipeline {
             steps {
                 script {
                     echo "Deploying to Staging environment..."
-
-                    // Deploy to Staging instance via SSH
                     sshagent (credentials: ['DEV_SSH_KEY']) {
                         sh """
-                          ssh -o StrictHostKeyChecking=no ubuntu@ec2-51-20-137-150.eu-north-1.compute.amazonaws.com \\
-                          'docker stop app_staging || true && docker rm app_staging || true && \\
-                           docker run -d --name app_staging -p 3000:3000 my-node-app:main'
+                            ssh -o StrictHostKeyChecking=no ubuntu@ec2-51-20-137-150.eu-north-1.compute.amazonaws.com '
+                                # Pull the image if it exists on the remote
+                                docker pull my-node-app:main || true
+                                
+                                # Stop and remove existing container
+                                docker stop app_staging || true
+                                docker rm app_staging || true
+                                
+                                # Run new container
+                                docker run -d \
+                                    --name app_staging \
+                                    -p 3000:3000 \
+                                    --restart unless-stopped \
+                                    my-node-app:main
+                                
+                                # Clean up old images
+                                docker image prune -f
+                            '
                         """
                     }
                 }
             }
+        }
+    }
+
+    post {
+        always {
+            // Clean up Docker images to prevent disk space issues
+            sh 'docker image prune -f'
+        }
+        failure {
+            echo 'Pipeline failed! Check the logs for details.'
+        }
+        success {
+            echo 'Pipeline completed successfully!'
         }
     }
 }
