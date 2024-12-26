@@ -52,7 +52,6 @@ pipeline {
                         
                         # Build the image
                         docker build \
-                            --progress=plain \
                             --no-cache \
                             --build-arg NODE_ENV=production \
                             -t my-node-app:${BRANCH_NAME} .
