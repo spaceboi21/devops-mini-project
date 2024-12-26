@@ -36,16 +36,10 @@ pipeline {
                 script {
                     echo "Building Docker image for branch: ${BRANCH_NAME}"
 
-                    // Build Docker image locally
+                    // Build Docker image locally with caching
                     sh """
-                      docker build -t my-node-app:${BRANCH_NAME} .
+                      docker build --no-cache -t my-node-app:${BRANCH_NAME} .
                     """
-
-                    // Uncomment the lines below to push to Docker Hub
-                    // sh """
-                    //   docker tag my-node-app:${BRANCH_NAME} your-dockerhub-user/my-node-app:${BRANCH_NAME}
-                    //   docker push your-dockerhub-user/my-node-app:${BRANCH_NAME}
-                    // """
                 }
             }
         }
